@@ -6,11 +6,12 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-function durationMinOf(start, end) {
+// Not: Süre kolonu kaldırıldı; gerekirse frontend hesaplayabilir.
+function minutesBetween(start, end) {
   const [sh, sm] = start.split(":").map(Number);
   const [eh, em] = end.split(":").map(Number);
   let s = sh * 60 + sm, e = eh * 60 + em;
-  if (e < s) e += 24 * 60;
+  if (e < s) e += 24 * 60; // gece devri
   return e - s;
 }
 
@@ -24,7 +25,8 @@ app.get("/api/entries", (req, res) => {
   if (employee)   { clauses.push("employee LIKE @emp");   params.emp = `%${employee}%`; }
   if (q) { clauses.push("(employee LIKE @q OR department LIKE @q OR location LIKE @q)"); params.q = `%${q}%`; }
   const where = clauses.length ? `WHERE ${clauses.join(" AND ")}` : "";
-  const rows = db.prepare(`SELECT id,date,employee,department,startTime,endTime,durationMin,location,createdAt,updatedAt FROM overtime_entries ${where} ORDER BY date DESC, id DESC`).all(params);
+  const rows = db.prepare(`SELECT id,date,employee,department,startTime,endTime,location,createdAt,updatedAt FROM overtime_entries ${where} ORDER BY date DESC, id DESC`).all(params)
+    .map(r => ({ ...r })); // duration artık gönderilmiyor
   res.json(rows);
 });
 
@@ -34,13 +36,14 @@ app.post("/api/entries", (req, res) => {
     return res.status(400).json({ error: "Zorunlu alanlar eksik." });
   }
   const now = new Date().toISOString();
-  const dur = durationMinOf(b.startTime, b.endTime);
+  // durationMin kolonu NOT NULL olduğu için görünürde kullanmasak da dolduruyoruz
+  const durationMin = minutesBetween(b.startTime, b.endTime);
   const stmt = db.prepare(`
     INSERT INTO overtime_entries
     (date, employee, department, startTime, endTime, durationMin, location, createdAt, updatedAt)
-    VALUES (@date, @employee, @department, @startTime, @endTime, @dur, @location, @now, @now)
+    VALUES (@date, @employee, @department, @startTime, @endTime, @durationMin, @location, @now, @now)
   `);
-  const info = stmt.run({ ...b, dur, now });
+  const info = stmt.run({ ...b, durationMin, now });
   res.json({ id: info.lastInsertRowid });
 });
 
@@ -51,14 +54,14 @@ app.put("/api/entries/:id", (req, res) => {
     return res.status(400).json({ error: "Zorunlu alanlar eksik." });
   }
   const now = new Date().toISOString();
-  const dur = durationMinOf(b.startTime, b.endTime);
+  const durationMin = minutesBetween(b.startTime, b.endTime);
   db.prepare(`
     UPDATE overtime_entries SET
       date=@date, employee=@employee, department=@department,
-      startTime=@startTime, endTime=@endTime, durationMin=@dur,
+      startTime=@startTime, endTime=@endTime, durationMin=@durationMin,
       location=@location, updatedAt=@now
     WHERE id=@id
-  `).run({ ...b, dur, now, id });
+  `).run({ ...b, durationMin, now, id });
   res.json({ ok: true });
 });
 
@@ -68,7 +71,7 @@ app.delete("/api/entries/:id", (req, res) => {
 });
 
 app.get("/api/export.csv", (_req, res) => {
-  const headers = ["id","date","employee","department","startTime","endTime","durationMin","location","createdAt","updatedAt"];
+  const headers = ["id","date","employee","department","startTime","endTime","location","createdAt","updatedAt"];
   const rows = db.prepare(`SELECT ${headers.join(",")} FROM overtime_entries ORDER BY date, id`).all();
   const csv = [headers.join(",")].concat(
     rows.map(r => headers.map(h => JSON.stringify(r[h] ?? "")).join(","))
@@ -85,8 +88,8 @@ app.listen(PORT, () => console.log(`API listening on :${PORT}`));
 // Not: Basit bir çalışma sayfası oluşturur.
 app.get('/api/export.xlsx', (_req, res) => {
   try {
-    const headers = ["id","date","employee","department","startTime","endTime","durationMin","location","createdAt","updatedAt"];
-    const rows = db.prepare(`SELECT ${headers.join(',')} FROM overtime_entries ORDER BY date, id`).all();
+  const headers = ["id","date","employee","department","startTime","endTime","location","createdAt","updatedAt"];
+  const rows = db.prepare(`SELECT ${headers.join(',')} FROM overtime_entries ORDER BY date, id`).all();
     const xlsx = require('xlsx');
     const data = [headers, ...rows.map(r => headers.map(h => r[h]))];
     const wb = xlsx.utils.book_new();
@@ -101,3 +104,18 @@ app.get('/api/export.xlsx', (_req, res) => {
     res.status(500).json({ error: 'Excel oluşturulamadı' });
   }
 });
+
+// Eski kayıtlarda durationMin NULL ise doldur (NOT NULL hatasını engellemek için)
+try {
+  const colInfo = db.prepare("PRAGMA table_info(overtime_entries)").all();
+  if (colInfo.find(c=>c.name==='durationMin')) {
+    const nullCount = db.prepare("SELECT COUNT(*) as c FROM overtime_entries WHERE durationMin IS NULL").get().c;
+    if (nullCount > 0) {
+      const rows = db.prepare("SELECT id,startTime,endTime FROM overtime_entries WHERE durationMin IS NULL").all();
+      const upd = db.prepare("UPDATE overtime_entries SET durationMin=@d WHERE id=@id");
+      const tx = db.transaction(rs => { rs.forEach(r=> upd.run({id:r.id, d: minutesBetween(r.startTime,r.endTime)})); });
+      tx(rows);
+      console.log(`durationMin NULL olan ${rows.length} kayıt güncellendi.`);
+    }
+  }
+} catch(e){ console.warn('durationMin migration atlandı:', e.message); }

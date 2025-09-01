@@ -1,3 +1,4 @@
+// backend/db.js
 const Database = require("better-sqlite3");
 const db = new Database("data.db");
 
@@ -9,15 +10,12 @@ CREATE TABLE IF NOT EXISTS overtime_entries (
   department TEXT NOT NULL,
   startTime TEXT NOT NULL,
   endTime TEXT NOT NULL,
-  -- durationMin kolonu artık kullanılmıyor; eski şemada kalmış olabilir
+  durationMin INTEGER NOT NULL,
   location TEXT,
+  reason TEXT,
   createdAt TEXT NOT NULL,
   updatedAt TEXT NOT NULL
 );
 `);
-
-// NOT: Eski veritabanında 'reason' kolonu varsa (eski oluşturulmuşsa) kalır, artık kullanılmıyor.
-// Tamamen kaldırmak için 'data.db' dosyasını silip uygulamayı yeniden başlatabilirsiniz (veri kaybı olur),
-// ya da manuel migration yapabilirsiniz.
 
 module.exports = db;
