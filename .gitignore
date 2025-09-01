@@ -1,0 +1,17 @@
+# Genel
+node_modules/
+*.log
+dist/
+
+# Backend veritabanı
+backend/data.db
+backend/*.sqlite
+
+# Vite / build output
+frontend/dist/
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+*.swp
+.vscode/
