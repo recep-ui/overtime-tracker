@@ -1,5 +1,10 @@
 const Database = require("better-sqlite3");
-const db = new Database("data.db");
+const path = require('path');
+const rawDbPath = process.env.DB_PATH;
+const resolvedDbPath = rawDbPath
+  ? (path.isAbsolute(rawDbPath) ? rawDbPath : path.join(__dirname, rawDbPath))
+  : path.join(__dirname, 'data.db');
+const db = new Database(resolvedDbPath);
 
 db.exec(`
 CREATE TABLE IF NOT EXISTS overtime_entries (

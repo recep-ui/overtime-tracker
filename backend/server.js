@@ -1,9 +1,11 @@
+require('dotenv').config();
 const express = require("express");
 const cors = require("cors");
 const db = require("./db");
 
 const app = express();
-app.use(cors());
+const ORIGIN = process.env.CORS_ORIGIN || "*";
+app.use(cors({ origin: ORIGIN === '*' ? true : ORIGIN.split(',').map(s=>s.trim()) }));
 app.use(express.json());
 
 // Not: Süre kolonu kaldırıldı; gerekirse frontend hesaplayabilir.
