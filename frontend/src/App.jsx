@@ -37,7 +37,7 @@ export default function App() {
 
   return (
     <div className="layout">
-      <h1 className="app-title">Mesai Takip <span className="muted" style={{fontWeight:400}}>(Basit)</span></h1>
+      <h1 className="app-title">Mesai Takip <span className="muted" style={{fontWeight:400}}></span></h1>
 
       {/* Filtreler */}
       <div className="panel filters">
@@ -74,7 +74,7 @@ export default function App() {
               <th>Bölüm</th>
               <th>Başlangıç</th>
               <th>Bitiş</th>
-              <th>Lokasyon</th>
+              <th>Durak</th>
               <th></th>
             </tr>
           </thead>
@@ -128,7 +128,7 @@ export default function App() {
             <label>Bitiş
               <input type="time" value={draft.endTime} onChange={e=>setDraft(d=>({...d,endTime:e.target.value}))}/>
             </label>
-            <label>Lokasyon
+            <label>Durak
               <input value={draft.location} onChange={e=>setDraft(d=>({...d,location:e.target.value}))}/>
             </label>
             <div style={{display:"flex", gap:10, alignItems:"center"}}>
