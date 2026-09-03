@@ -2,10 +2,12 @@
 node_modules/
 *.log
 dist/
+*.db
 
 # Backend veritabanı
 backend/data.db
 backend/*.sqlite
+data.db
 
 # Vite / build output
 frontend/dist/

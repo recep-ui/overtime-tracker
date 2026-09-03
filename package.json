@@ -1,0 +1,23 @@
+{
+  "name": "overtime-tracker-root",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Overtime Tracker - Fazla Mesai Takip Sistemi",
+  "scripts": {
+    "dev": "node -e \"const { spawn } = require('child_process'); const b = spawn('npm', ['start'], { cwd: 'backend', stdio: 'inherit', shell: true }); const f = spawn('npm', ['run', 'dev', '--', '--host', '0.0.0.0'], { cwd: 'frontend', stdio: 'inherit', shell: true }); process.on('SIGINT', () => { b.kill(); f.kill(); process.exit(); });\"",
+    "start": "npm run dev",
+    "backend": "npm start --prefix backend",
+    "frontend": "npm run dev --prefix frontend -- --host 0.0.0.0",
+    "build": "npm run build --prefix frontend",
+    "install:all": "npm install --prefix backend && npm install --prefix frontend"
+  },
+  "keywords": [
+    "overtime",
+    "tracker",
+    "express",
+    "react",
+    "sqlite"
+  ],
+  "author": "",
+  "license": "MIT"
+}
